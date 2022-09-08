@@ -99,3 +99,81 @@ public class EntityManagerProducer {
 ```
 15. Create repository file (business logic file)
 16. Create Wrapper to wrap data from client and pass to repository file
+
+**Business Logic**
+1. Add necessary dependency to pom.xml
+```
+<dependency>
+   <groupId>org.jboss.resteasy</groupId>
+   <artifactId>resteasy-jaxrs</artifactId>
+   <version>3.6.2.Final</version>
+   <scope>provided</scope>
+</dependency>
+```
+2. Modify service file
+<ins>Example</ins>
+```
+@Path("payment")
+@RequestScoped
+public class PaymentService {
+    @Inject
+    private PaymentRepository paymentBean;
+
+    @GET
+    @Path("getPaymentList")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getPaymentList(){
+        return Response.ok(paymentBean.getPaymentList()).build();
+    }
+
+    @GET
+    @Path("getPaymentFLName/{fname: [A-Z][a-zA-Z]*}-{lname: [A-Z][a-zA-Z]*}")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getPaymentFLName(@PathParam("fname") String fname, @PathParam("lname") String lname ){
+        if (paymentBean.getPaymentByName(fname, lname) != null){
+            return Response.ok(paymentBean.getPaymentByName(fname, lname)).build();
+        }else{
+            return Response.status(Response.Status.OK).entity("Payment Record Not Found").type(MediaType.TEXT_PLAIN).build();
+        }
+    }
+
+    @POST
+    @Path("addPayment")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response addPayment(PaymentWrapper payment){
+        BigDecimal amountAfterDiscount = null;
+        BigDecimal amount1 = new BigDecimal(payment.getAmount());
+        if (payment.getCustomerType().equals("silver")){
+            amountAfterDiscount = amount1.subtract(amount1.multiply(new BigDecimal(0.05)));
+        }else{
+            amountAfterDiscount = amount1.subtract(amount1.multiply(new BigDecimal(0.10)));
+        }
+        payment.setAmountAfterDiscount(amountAfterDiscount.toString());
+        paymentBean.addPayment(payment);
+        List<Payment> list = paymentBean.getPaymentByName(payment.getCustomerFirstName(), payment.getCustomerLastName());
+        if (list != null) {
+            return Response.ok(list.get(0)).build();
+        }else{
+            return Response.status(Response.Status.OK).entity("Payment Record not added").type(MediaType.TEXT_PLAIN).build();
+        }
+    }
+}
+```
+3. Create APIApplication class
+```
+package model.webservices;
+import javax.ws.rs.ApplicationPath;
+import javax.ws.rs.core.Application;
+import java.util.HashSet;
+import java.util.Set;
+
+@ApplicationPath("/rest")
+public class APIApplication extends Application {
+    @Override
+    public Set<Class<?>> getClasses() {
+        Set<Class<?>> set = new HashSet<>();
+        set.add(PaymentService.class );
+        return set;
+    }
+}
+```

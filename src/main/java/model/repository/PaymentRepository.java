@@ -28,7 +28,7 @@ public class PaymentRepository {
     public List<Payment> getPaymentByName(String firstName, String lastName){
         Query q = em.createNamedQuery("Payment.findByFLName");
         q.setParameter("customerFirstName", firstName);
-        q.setParameter("customerLastName", firstName);
+        q.setParameter("customerLastName", lastName);
         List<Payment> result =  q.getResultList();
         if (!result.isEmpty()){
             return result;
